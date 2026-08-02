@@ -95,6 +95,7 @@ let apiBase = 'https://api.hcgateway.shuchir.dev';
 let lastSync = null;
 let taskDelay = 7200 * 1000; // 2 hours
 let fullSyncMode = true; // Default to full 30-day sync
+const INCREMENTAL_OVERLAP_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 Toast.show({
   type: 'info',
@@ -284,9 +285,14 @@ const sync = async (customStartTime, customEndTime) => {
   } else if (fullSyncMode) {
     startTime = String(new Date(new Date().setDate(new Date().getDate() - 29)).toISOString());
   } else {
-    if (lastSync) 
-      startTime = lastSync;
-    else 
+    // Records are filtered by measurement time, not by when they landed in
+    // Health Connect. Sources such as Samsung Health flush in batches hours
+    // later, so a window starting exactly at the last sync never sees them
+    // and lastSync moves past them for good. Overlap instead — duplicates are
+    // cheap on the server, dropped samples are unrecoverable.
+    if (lastSync)
+      startTime = String(new Date(new Date(lastSync).getTime() - INCREMENTAL_OVERLAP_MS).toISOString());
+    else
       startTime = String(new Date(new Date().setDate(new Date().getDate() - 29)).toISOString());
   }
   
