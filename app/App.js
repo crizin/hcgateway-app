@@ -96,6 +96,9 @@ let lastSync = null;
 let taskDelay = 7200 * 1000; // 2 hours
 let fullSyncMode = true; // Default to full 30-day sync
 const INCREMENTAL_OVERLAP_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// Daily aggregates (e.g. Samsung Health's step total) span 00:00–23:59, so a
+// window ending at "now" excludes them until the day is over.
+const END_TIME_LOOKAHEAD_MS = 24 * 60 * 60 * 1000; // 1 day
 
 Toast.show({
   type: 'info',
@@ -312,7 +315,7 @@ const sync = async (customStartTime, customEndTime) => {
           timeRangeFilter: {
             operator: "between",
             startTime: startTime,
-            endTime: customEndTime ? customEndTime : String(new Date().toISOString())
+            endTime: customEndTime ? customEndTime : String(new Date(Date.now() + END_TIME_LOOKAHEAD_MS).toISOString())
           }
         }
       );
